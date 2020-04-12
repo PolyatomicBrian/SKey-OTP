@@ -1,3 +1,6 @@
 .idea/
 venv/
 list-passwords.txt
+client_passwords.txt
+server_password.txt
+

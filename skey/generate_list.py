@@ -15,7 +15,8 @@ from hashlib import md5       # Used for hash iterations of the seed.
 
 IS_DEBUG = True
 
-OUT_FILE = "list-passwords.txt"
+OUT_CLIENT_FILE = "client_passwords.txt"
+OUT_SERVER_FILE = "server_password.txt"
 
 MAX_SEED = 1024  # Entropy of passwords based on this value.
 
@@ -32,21 +33,32 @@ NUM_ITERS_ARG_NUM = 1  # i.e. sys.argv[1]
 
 class FileService:
     # Class vars:
-    #   * file - File
+    #   * cfile - Client file to contain list of passwords
+    #   * sfile - Server file to contain first password
     def __init__(self):
         print_debug("Creating FileService...")
-        # Create file
-        f = open(OUT_FILE, "w")
-        self.file = f
+        cf = open(OUT_CLIENT_FILE, "w")
+        sf = open(OUT_SERVER_FILE, "w")
+        self.cfile = cf
+        self.sfile = sf
         print_debug("Successful init of FileService")
 
     def write(self, list_passwords):
-        """Writes passwords to output file."""
-        self.file.write("%s" % str(list_passwords))
+        """Writes passwords to output files."""
+        try:
+            self.write_client_file(list_passwords)
+            self.write_server_file(list_passwords)
+        finally:
+            self.cfile.close()
+            self.sfile.close()
 
-    def close_file(self):
-        """Simply closes the file."""
-        self.file.close()
+    def write_client_file(self, list_passwords):
+        """Writes passwords to client output file."""
+        self.cfile.write("%s\n" % str(list_passwords))
+
+    def write_server_file(self, list_passwords):
+        """Writes first password to server output file."""
+        self.sfile.write("%s" % str(list_passwords[0]))
 
 
 ''' FUNCTIONS '''
@@ -65,7 +77,7 @@ def error_quit(msg, code):
        error code of `code`."""
     print("[!] %s" % msg)
     usage()
-    exit(code)
+    sys.exit(code)
 
 
 def validate_iters(num_iters):
@@ -121,11 +133,13 @@ def main():
     print_debug("Args: %s" % str(sys.argv))
     num_iters = parse_args()
     print_debug("Received argument: %s" % num_iters)
-    file_service = FileService()
+    try:
+        file_service = FileService()
+    except:
+        error_quit("Failed to initialize FileService", 500)
     list_passwords = generate_passwords(num_iters)
     print_debug("Generated password list: %s" % str(list_passwords))
     file_service.write(list_passwords)
-    file_service.close_file()
     print_debug("Done!")
 
 
