@@ -11,13 +11,12 @@ from ast import literal_eval  # Used to safely parse list from file
 
 ''' GLOBALS '''
 
-IS_DEBUG = True
+IS_DEBUG = False
 
 OUT_CLIENT_FILE = "client_passwords.txt"
 
 PROGRAM_ARG_NUM = 0    # i.e. sys.argv[0]
 
-DEFAULT_SERVER_PORT = 40000
 
 ''' CLASSES '''
 
@@ -96,6 +95,7 @@ def main():
     # Connect to server.
 
     pword = get_next_password(file_service)
+    print(pword)
 
     # Present password to server.
 

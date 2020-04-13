@@ -54,7 +54,7 @@ class FileService:
 
     def write_client_file(self, list_passwords):
         """Writes passwords to client output file."""
-        self.cfile.write("%s\n" % str(list_passwords))
+        self.cfile.write("%s\n" % str(list_passwords[1:]))
 
     def write_server_file(self, list_passwords):
         """Writes first password to server output file."""
@@ -107,12 +107,24 @@ def generate_passwords(num_iters):
     """Returns list of OTPs based on the 8 middle characters of an MD5-hashed
        pseudorandom number."""
     list_passwords = []
+
+    # Get initial hash
+    seed = str(randrange(MAX_SEED))  # Generate random number.
+    p = do_hash(seed)
+    list_passwords.append(p)
+
+    # Get n hashes based on initial hash
     for i in range(0, num_iters):
-        seed = randrange(MAX_SEED)  # Generate random number.
-        hashed_seed = md5(b'%d' % seed).hexdigest()  # MD5 hash of that random number.
-        otp = hashed_seed[12:20]    # Grab middle 8 chars of MD5 hash
-        list_passwords.append(otp)
+        p = do_hash(p)
+        list_passwords.append(p)
+    list_passwords.reverse()  # Start with the n-th hash iteration.
     return list_passwords
+
+
+def do_hash(pword):
+    hashed = md5(pword.encode()).hexdigest()  # MD5 hash of that random number.
+    otp = hashed[12:20]  # Grab middle 8 chars of MD5 hash
+    return otp
 
 
 ''' DEBUG '''
