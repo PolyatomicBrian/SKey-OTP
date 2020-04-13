@@ -92,12 +92,8 @@ def main():
     print_debug("Starting...")
     file_service = FileService()
 
-    # Connect to server.
-
     pword = get_next_password(file_service)
-    print(pword)
-
-    # Present password to server.
+    print(pword)  # Output password for piping.
 
     file_service.remove_used_password(file_service.get_list_from_file())
 
