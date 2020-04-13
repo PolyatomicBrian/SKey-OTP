@@ -26,7 +26,7 @@ class FileService:
         print_debug("Successful init of FileService")
 
     def get_password_from_file(self):
-        """Parses list literal from server password file."""
+        """Parses string literal from server password file."""
         try:
             sfile = open(OUT_SERVER_FILE, "r")
             last_pword = sfile.readline()
