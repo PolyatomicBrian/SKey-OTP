@@ -60,7 +60,9 @@ class ClientConnectedThread(threading.Thread):
                     serv_msg = self.authenticate_otp(otp_recv)
                     self.client_sock.send(serv_msg.encode())
                 finally:
+                    self.client_sock.close()
                     self.lock.release()
+                    return
             except Exception as e:
                 print_debug("Encountered error: " + str(e))
 

@@ -5,7 +5,7 @@
    Usage: client.py
    Sample: ./client.py
 """
-
+import socket
 import sys
 from ast import literal_eval  # Used to safely parse list from file
 
@@ -16,6 +16,10 @@ IS_DEBUG = False
 OUT_CLIENT_FILE = "client_passwords.txt"
 
 PROGRAM_ARG_NUM = 0    # i.e. sys.argv[0]
+
+SERVER_IP = "localhost"
+SERVER_PORT = 40000
+BUFF_SIZE = 1024
 
 
 ''' CLASSES '''
@@ -75,6 +79,21 @@ def get_next_password(file_service):
     return pword
 
 
+def send_to_server(ip, port, pword):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((ip, port))
+        sock.send(pword.encode())
+        msg_recv = sock.recv(BUFF_SIZE).decode('utf-8')
+        sock.close()
+    except socket.error:
+        error_quit("Connection refused, did you specify the correct host and port?", 400)
+    except Exception as e:
+        print(str(e))
+        error_quit("Terminating session due to issue in transmission.", 400)
+    return msg_recv
+
+
 ''' DEBUG '''
 
 
@@ -93,11 +112,14 @@ def main():
     file_service = FileService()
 
     pword = get_next_password(file_service)
-    print(pword)  # Output password for piping.
+    print_debug("Password %s will be used to authenticate." % pword)
+
+    ip = SERVER_IP
+    port = SERVER_PORT
+    resp = send_to_server(ip, port, pword)
+    print(resp)
 
     file_service.remove_used_password(file_service.get_list_from_file())
-
-    print_debug("Password %s will be used to authenticate." % pword)
     print_debug("Done!")
 
 
