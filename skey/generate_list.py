@@ -8,7 +8,7 @@
 """
 
 import sys
-from random import randrange  # Used for generating a seed.
+from random import randint    # Used for generating a seed.
 from hashlib import md5       # Used for hash iterations of the seed.
 
 ''' GLOBALS '''
@@ -109,7 +109,7 @@ def generate_passwords(num_iters):
     list_passwords = []
 
     # Get initial hash
-    seed = str(randrange(MAX_SEED))  # Generate random number.
+    seed = str(randint(0, MAX_SEED))  # Generate random number.
     p = do_hash(seed)
     list_passwords.append(p)
 
