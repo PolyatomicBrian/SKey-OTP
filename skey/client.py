@@ -2,8 +2,10 @@
 
 """client.py
    Author: Brian Jopling, April 2020
-   Usage: client.py
+   Usage: client.py [IP PORT]
    Sample: ./client.py
+           ./client.py 127.0.0.1 40123
+
 """
 import socket
 import sys
@@ -16,6 +18,8 @@ IS_DEBUG = False
 OUT_CLIENT_FILE = "client_passwords.txt"
 
 PROGRAM_ARG_NUM = 0    # i.e. sys.argv[0]
+IP_ARG_NUM = 1
+PORT_ARG_NUM = 2
 
 SERVER_IP = "localhost"
 SERVER_PORT = 40000
@@ -114,11 +118,17 @@ def main():
     pword = get_next_password(file_service)
     print_debug("Password %s will be used to authenticate." % pword)
 
-    ip = SERVER_IP
-    port = SERVER_PORT
+    # If IP & Port are passed as args, use them.
+    # Otherwise, default to localhost:40000.
+    # Note: IP & Port should be passed together, not one or the other.
+    ip = sys.argv[IP_ARG_NUM] if len(sys.argv) == PORT_ARG_NUM + 1 else SERVER_IP
+    port = sys.argv[PORT_ARG_NUM] if len(sys.argv) == PORT_ARG_NUM + 1 else SERVER_PORT
+
+    # Send otp to server, print response.
     resp = send_to_server(ip, port, pword)
     print(resp)
 
+    # Otp was used, so remove it from the list.
     file_service.remove_used_password(file_service.get_list_from_file())
     print_debug("Done!")
 
