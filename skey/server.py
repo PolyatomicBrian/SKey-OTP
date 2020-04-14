@@ -149,7 +149,7 @@ def handle_client_connections(server_port):
         lock = threading.Lock()
         # Create socket, connect to host and port.
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(('', server_port))  # Bind to OS-assigned available & random port.
+        s.bind(('', server_port))
         s.listen(1)
         print_debug("Server running.")
         while 1:
