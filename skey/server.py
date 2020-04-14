@@ -2,11 +2,13 @@
 
 """server.py
    Author: Brian Jopling, April 2020
-   Usage: server.py
+   Usage: server.py [PORT]
    Sample: ./server.py
+           ./server.py 40123
 """
-
+import socket
 import sys
+import threading
 from hashlib import md5       # Used for hash iterations of the otp.
 
 ''' GLOBALS '''
@@ -16,8 +18,84 @@ IS_DEBUG = True
 OUT_SERVER_FILE = "server_password.txt"
 
 PROGRAM_ARG_NUM = 0    # i.e. sys.argv[0]
+PORT_ARG_NUM = 1       # i.e. sys.argv[1], optional port arg
+
+DEFAULT_PORT = 40000
+BUFF_SIZE = 1024
+
+MSG_SERVER_SUCCESS = "Authentication Successful!\n"
+MSG_SERVER_FAILURE = "Authentication Failure!\n"
 
 ''' CLASSES '''
+
+
+class ClientConnectedThread(threading.Thread):
+    """New thread for every connected client. Each thread
+       handles an individual client's requests."""
+    # Class vars:
+    #   * client_ip - String
+    #   * client_port - String
+    #   * client_sock - Socket
+    #   * lock - Mutex lock
+    #   * file_service - Service for reading/writing to password file.
+    def __init__(self, ip, port, sock, lock):
+        """Initialize args to class variables."""
+        threading.Thread.__init__(self)
+        self.client_ip = ip
+        self.client_port = port
+        self.client_sock = sock
+        self.lock = lock
+        self.file_service = FileService()
+
+    def run(self):
+        """Driver for individual thread. Handles client requests."""
+        print_debug("Host %s:%s has connected!" % (self.client_ip, self.client_port))
+        while True:
+            try:
+                # Get otp from client
+                otp_recv = self.parse_client_request().decode('utf-8').rstrip('\r\n')
+                print_debug("User sent over: %s" % otp_recv)
+                self.lock.acquire()
+                try:
+                    serv_msg = self.authenticate_otp(otp_recv)
+                    self.client_sock.send(serv_msg.encode())
+                finally:
+                    self.lock.release()
+            except Exception as e:
+                print_debug("Encountered error: " + str(e))
+
+    def parse_client_request(self):
+        try:
+            msg_rec = self.client_sock.recv(BUFF_SIZE)
+        except socket.error:
+            print_debug("Connection error, unable to receive command.", 400)
+        except:
+            print_debug("An unknown error occurred, unable to receive command.", 400)
+        return msg_rec
+
+    def authenticate_otp(self, otp_recv):
+        last_password = self.file_service.get_password_from_file()
+        print_debug("Server's last stored password: %s" % last_password)
+        hashed_user_password = self.do_hash(otp_recv)
+        print_debug("Hashed user password is: %s" % hashed_user_password)
+        if hashed_user_password == last_password:
+            return self.successful_authentication(self.file_service, otp_recv)
+        else:
+            return self.failed_authentication()
+
+    def do_hash(self, pword):
+        hashed = md5(pword.encode()).hexdigest()  # MD5 hash of that random number.
+        otp = hashed[12:20]  # Grab middle 8 chars of MD5 hash
+        return otp
+
+    def successful_authentication(self, file_service, new_password):
+        print(MSG_SERVER_SUCCESS)
+        file_service.update_password_in_file(new_password)
+        return MSG_SERVER_SUCCESS
+
+    def failed_authentication(self):
+        print(MSG_SERVER_FAILURE)
+        return MSG_SERVER_FAILURE
 
 
 class FileService:
@@ -31,7 +109,7 @@ class FileService:
             sfile = open(OUT_SERVER_FILE, "r")
             last_pword = sfile.readline()
         except Exception:
-            error_quit("Failed to read from file %s" % sfile.name, 403)
+            error_quit("Failed to read from file %s" % sfile.name, 500)
         return last_pword
 
     def update_password_in_file(self, new_password):
@@ -62,26 +140,28 @@ def error_quit(msg, code):
     sys.exit(code)
 
 
-def get_next_password(file_service):
+def handle_client_connections(server_port):
+    """Driver that creates a socket and handles connections."""
+    # Initialize logger.
+    print_debug("Starting server.")
     try:
-        if not file_service.get_list_from_file():
-            print_debug("List of passwords is empty")
-            error_quit("All passwords have been exhausted, please generate a new list of passwords!", 200)
-        pword = file_service.get_list_from_file()[0]
-    except Exception:
-        error_quit("Failed to read first password", 500)
-    return pword
-
-
-def do_hash(pword):
-    hashed = md5(pword.encode()).hexdigest()  # MD5 hash of that random number.
-    otp = hashed[12:20]  # Grab middle 8 chars of MD5 hash
-    return otp
-
-
-def successful_authentication(file_service, new_password):
-    print("Authentication successful!")
-    file_service.update_password_in_file(new_password)
+        lock = threading.Lock()
+        # Create socket, connect to host and port.
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('', server_port))  # Bind to OS-assigned available & random port.
+        s.listen(1)
+        print_debug("Server running.")
+        while 1:
+            try:
+                conn, addr = s.accept()
+                ip = addr[0]
+                port = addr[1]
+                client = ClientConnectedThread(ip, port, conn, lock)  # New thread.
+                client.start()
+            except Exception as e:
+                print("Encountered error: " + str(e))
+    except socket.error as e:
+        print("Unable to connect due to " + str(e))
 
 
 ''' DEBUG '''
@@ -97,25 +177,11 @@ def print_debug(msg):
 
 
 def main():
-    """Main driver that parses args & creates objects."""
+    """Main driver."""
     print_debug("Starting...")
-    file_service = FileService()
-
-    print("Enter your OTP: ")
-    user_password = str(sys.stdin.readlines()[0].rstrip('\n'))
-    print_debug("User submitted: %s" % user_password)
-
-    last_password = file_service.get_password_from_file()
-
-    print_debug("Server stored last password: %s" % last_password)
-
-    hashed_user_password = do_hash(user_password)
-    print_debug("Hashed user password is: %s" % hashed_user_password)
-
-    if hashed_user_password == last_password:
-        successful_authentication(file_service, user_password)
-    else:
-        print("Failed to Authenticate.")
+    port = sys.argv[PORT_ARG_NUM] if len(sys.argv) == PORT_ARG_NUM + 1 else DEFAULT_PORT
+    port = int(port)
+    handle_client_connections(port)
     print_debug("Done!")
 
 
