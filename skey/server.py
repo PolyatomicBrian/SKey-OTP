@@ -144,7 +144,6 @@ def error_quit(msg, code):
 
 def handle_client_connections(server_port):
     """Driver that creates a socket and handles connections."""
-    # Initialize logger.
     print_debug("Starting server.")
     try:
         lock = threading.Lock()
