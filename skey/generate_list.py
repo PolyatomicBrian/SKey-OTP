@@ -58,7 +58,7 @@ class FileService:
 
     def write_server_file(self, list_passwords):
         """Writes first password to server output file."""
-        self.sfile.write("%s" % str(list_passwords[0]))
+        self.sfile.write("%s\n" % str(list_passwords[0]))
 
 
 ''' FUNCTIONS '''
