@@ -47,7 +47,7 @@ class FileService:
         """Removes first password (which was recently used) from list file."""
         try:
             cfile = open(OUT_CLIENT_FILE, "w")
-            cfile.write("%s" % str(list_passwords[1:]))
+            cfile.write("%s\n" % str(list_passwords[1:]))
         finally:
             cfile.close()
 

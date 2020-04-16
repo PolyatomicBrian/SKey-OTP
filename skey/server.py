@@ -10,6 +10,7 @@ import socket
 import sys
 import threading
 from hashlib import md5       # Used for hash iterations of the otp.
+from datetime import datetime # Used to timestamp logs.
 
 ''' GLOBALS '''
 
@@ -41,6 +42,7 @@ class ClientConnectedThread(threading.Thread):
     def __init__(self, ip, port, sock, lock):
         """Initialize args to class variables."""
         threading.Thread.__init__(self)
+        print_debug(datetime.now())
         self.client_ip = ip
         self.client_port = port
         self.client_sock = sock
@@ -109,7 +111,7 @@ class FileService:
         """Parses string literal from server password file."""
         try:
             sfile = open(OUT_SERVER_FILE, "r")
-            last_pword = sfile.readline()
+            last_pword = sfile.readline().rstrip('\n')
         except Exception:
             error_quit("Failed to read from file %s" % sfile.name, 500)
         return last_pword
@@ -118,7 +120,7 @@ class FileService:
         """Updates password in server password file with last-used password."""
         try:
             sfile = open(OUT_SERVER_FILE, "w")
-            sfile.write("%s" % new_password)
+            sfile.write("%s\n" % new_password)
         finally:
             sfile.close()
 
